@@ -1,26 +1,27 @@
-Campfire 2014
-=============
+CampFire mod by Doc
+[modified by Napiophelios-rev014]
 
-Campfire mod for Minetest
-
-original code by Doc 
-
-https://github.com/Doc22/campfire-mod
-
-modified by Napiophelios-rev006
-
-Depends: default, fire
+Depends: default, fire,  wool
 
 For Minetest 0.4.10 development build (commit d2219171 or later)
 
-It provides light and has sound effects and players can use it to cook (but its limited)
+-----------------------------------------------
 
-Original code (and current changes)
-License Code: WTFPL
+Original CampFire mod by Doc
+License of code : WTFPL
+https://github.com/Doc22/campfire-mod
 
-Blender Graphics/mesh objects from more_fire mod by NathanS
-Licenses: CC by SA
+-----------------------------------------------
+
+Node Swap ABM from NateS's More_fire mod
+(solves the glitchy formspec transition)
+
+More_fire mod
+Licensed : CC by SA
 https://github.com/NathanSalapat/more_fire
+-----------------------------------------------
 
-Sound effect is from Fire mod (toned down a bit)
-Licenses:CC BY-SA 3.0
+The smoke particles from LazyJ's Fork of Semmett9's "Fake Fire" Mod
+
+code by: VanessaE and JP
+License:  GPL v2
