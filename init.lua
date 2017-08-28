@@ -1,39 +1,119 @@
 --[[
 CampFire mod by Doc
-[modified by Napiophelios-rev014]
-
-Depends: default, fire,  wool
-
-For Minetest 0.4.10 development build (commit d2219171 or later)
-
+[modified by Napiophelios]
+Depends: default, beds, fire, wool
+For Minetest 0.5.0
 -----------------------------------------------
-
 Original CampFire mod by Doc
 License of code : WTFPL
-
 -----------------------------------------------
-
 Node Swap ABM from NateS's More_fire mod
 (solves the glitchy formspec transition)
-
 More_fire mod
 Licensed : CC by SA
-
 -----------------------------------------------
-
-The smoke particles from LazyJ's Fork of Semmett9's "Fake Fire" Mod
-
-code by: VanessaE and JP
-License:  GPL v2
-
+Particle Functions from New Campfire mod by Pavel Litvinoff
+License of code : GPLv2.1
+Copyright (C) 2017 Pavel Litvinoff <googolgl@gmail.com>
+<https://forum.minetest.net/viewtopic.php?f=9&t=16611>
 --]]
 
 campfire = {}
 
------------------
--- Formspecs
------------------
+---------------------
+--Particle Functions
+---------------------
+local function fire_particles_on(pos) -- 3 layers of fire
+    local meta = minetest.get_meta(pos)
+    local id = minetest.add_particlespawner({ -- 1 layer big particles fire
+        amount = 9,
+        time = 3,
+        minpos = {x = pos.x - 0.1, y = pos.y-0.5, z = pos.z - 0.1},
+        maxpos = {x = pos.x + 0.1, y = pos.y-0.1, z = pos.z + 0.1},
+        minvel = {x= 0, y= 0, z= 0},
+        maxvel = {x= 0, y= 0, z= 0},
+        minacc = {x= 0, y= 0, z= 0},
+        maxacc = {x= 0, y= 0, z= 0},
+        minexptime = 0.75,
+        maxexptime = 1.25,
+        minsize = 4,
+        maxsize = 6,
+        collisiondetection = false,
+        vertical = true,
+        texture = "fire_basic_flame_animated.png",
+        animation = {type="vertical_frames", aspect_w=16, aspect_h=16, length = 1.15,},
+         glow = 5,
+    })
+    meta:set_int("layer_1", id)
 
+    local id = minetest.add_particlespawner({ -- 2 layer smol particles fire
+        amount = 9,
+        time = 1,
+        minpos = {x = pos.x - 0.1, y = pos.y-0.5, z = pos.z - 0.1},
+        maxpos = {x = pos.x + 0.1, y = pos.y-0.1, z = pos.z + 0.1},
+        minvel = {x= 0, y= 0, z= 0},
+        maxvel = {x= 0, y= 0, z= 0},
+        minacc = {x= 0, y= 0, z= 0},
+        maxacc = {x= 0, y= 0, z= 0},
+        minexptime = 0.4,
+        maxexptime = 1.1,
+        minsize = 3,
+        maxsize = 4,
+        collisiondetection = false,
+        vertical = true,
+        texture = "fire_basic_flame_animated.png",
+        animation = {type="vertical_frames", aspect_w=16, aspect_h=16, length = 1.25,},
+         glow = 5,
+    })
+    meta:set_int("layer_2", id)
+
+     local image_number = math.random(4)
+    local id = minetest.add_particlespawner({ --3 layer embers
+        amount = 1,
+        time = 1,
+        minpos = {x = pos.x - 0.1, y = pos.y - 0.05, z = pos.z - 0.1},
+        maxpos = {x = pos.x + 0.2, y = pos.y + 0.2, z = pos.z + 0.2},
+        minvel = {x= 0, y= 0.25, z= 0},
+        maxvel = {x= 0, y= 0.75, z= 0},
+        minacc = {x= 0, y= 0, z= 0},
+        maxacc = {x= 0, y= 0.025, z= 0},
+        minexptime = 0.5,
+        maxexptime = 1.5,
+        minsize = 0.05,
+        maxsize = 0.25,
+        collisiondetection = true,
+        glow = 3,
+        texture = "campfire_particle_"..image_number..".png",
+    })
+    meta:set_int("layer_3", id)
+end
+
+local function fire_particles_off(pos)
+    local meta = minetest.get_meta(pos)
+    local id_1 = meta:get_int("layer_1");
+    local id_2 = meta:get_int("layer_2");
+    local id_3 = meta:get_int("layer_3");
+    minetest.delete_particlespawner(id_1)
+    minetest.delete_particlespawner(id_2)
+    minetest.delete_particlespawner(id_3)
+end
+
+local function effect(pos, texture, vlc, acc, time, size)
+    local id = minetest.add_particle({
+        pos = pos,
+        velocity = vlc,
+        acceleration = acc,
+        expirationtime = time,
+        size = size,
+        collisiondetection = true,
+        vertical = true,
+        texture = texture,
+    })
+end
+
+---------------
+-- Formspecs
+---------------
 function campfire.campfire_active_formspec(pos)
 local formspec =
    "size[8,6]"..
@@ -73,40 +153,49 @@ campfire.campfire_formspec =
    "listring[current_player;main]"..
    default.get_hotbar_bg(0,2)
 
------------------
+---------
 --Nodes
------------------
-
+---------
 minetest.register_node("campfire:campfire", {
-description = "Camp Fire",
-drawtype = 'mesh',
-mesh = 'contained_campfire.obj',
-tiles = {
-{name='campfire_invisible.png', animation={type='vertical_frames', aspect_w=16, aspect_h=16, length=1}}, {name='[combine:16x16:0,0=default_gravel.png:0,8=default_wood.png'}},
-inventory_image = "[combine:16x16:0,0=fire_basic_flame.png:0,12=default_gravel.png",
-wield_image = "[combine:16x16:0,0=fire_basic_flame.png:0,12=default_gravel.png",
-walkable = false,
-buildable_to = true,
-paramtype = 'light',
-sunlight_propagates = true,
-light_source =1,
-paramtype2 = "facedir",
-selection_box = {
-type = "fixed",
-fixed = { -0.48, -0.5, -0.48, 0.48, -0.5, 0.48 }
-},
-groups = {oddly_breakable_by_hand=2, dig_immediate=3, attached_node=1},
-	legacy_facedir_simple = true,
+	description = "Campfire",
+	drawtype = "nodebox",
+	tiles = {'default_gravel.png^[colorize:#1f1f1f:100'},
+	inventory_image = "[combine:16x16:0,0=fire_basic_flame.png:0,12=default_gravel.png",
+	wield_image = "[combine:16x16:0,0=fire_basic_flame.png:0,12=default_gravel.png",
+	walkable = false,
+	buildable_to = false,
+	sunlight_propagates = true,
+	groups = {oddly_breakable_by_hand=3, dig_immediate=2, attached_node=1},
+	light_source =1,
+	paramtype = 'light',
 	sounds = default.node_sound_stone_defaults(),
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.25, -0.5, 0.25, 0.25, -0.375, 0.375},
+			{-0.3125, -0.5, 0.1875, -0.1875, -0.375, 0.3125},
+			{-0.375, -0.5, -0.25, -0.25, -0.375, 0.25},
+			{-0.3125, -0.5, -0.3125, -0.1875, -0.375, -0.1875},
+			{-0.25, -0.5, -0.375, 0.25, -0.375, -0.25},
+			{0.1875, -0.5, -0.3125, 0.3125, -0.375, -0.1875},
+			{0.25, -0.5, -0.25, 0.375, -0.375, 0.25},
+			{0.1875, -0.5, 0.1875, 0.3125, -0.375, 0.3125},
+		}
+	},
+	selection_box = {
+		type = "fixed",
+		fixed = {-0.4375, -0.5, -0.4375, 0.4375, -0.3125, 0.4375},
+	},
+	
 	on_construct = function(pos)
-			local meta = minetest.get_meta(pos)
-			meta:set_string('formspec', campfire.campfire_formspec)
-			meta:set_string('infotext', 'Campfire');
-			local inv = meta:get_inventory()
-			inv:set_size('fuel', 1)
-			inv:set_size("src", 1)
-			inv:set_size("dst", 2)
-		end,
+		local meta = minetest.get_meta(pos)
+		meta:set_string('formspec', campfire.campfire_formspec)
+		meta:set_string('infotext', 'Campfire');
+		local inv = meta:get_inventory()
+		inv:set_size('fuel', 1)
+		inv:set_size("src", 1)
+		inv:set_size("dst", 2)
+	end,
 	can_dig = function(pos,player)
 		local meta = minetest.get_meta(pos);
 		local inv = meta:get_inventory()
@@ -122,25 +211,34 @@ groups = {oddly_breakable_by_hand=2, dig_immediate=3, attached_node=1},
 })
 
 minetest.register_node("campfire:campfire_active", {
-description = "Campfire Active",
-drawtype = 'mesh',
-mesh = 'contained_campfire.obj',
-tiles = {
-{name='fire_basic_flame_animated.png', animation={type='vertical_frames', aspect_w=16, aspect_h=16, length=4}}, {name='[combine:16x16:0,0=default_gravel.png:0,8=default_wood.png'}},
-walkable = false,
-damage_per_second = 1,
-drop = "",
-paramtype = 'light',
-sunlight_propagates = true,
-light_source =12,
-paramtype2 = "facedir",
-legacy_facedir_simple = true,
-selection_box = {
-type = "fixed",
-fixed = { -0.48, -0.5, -0.48, 0.48, -0.5, 0.48 }
-},
-groups = {oddly_breakable_by_hand=1, dig_immediate=2, hot=2, attached_node=1,not_in_creative_inventory =1},
-sounds = default.node_sound_stone_defaults(),
+	drawtype = "nodebox",
+	tiles = {'tnt_blast.png','default_gravel.png^[colorize:#1f1f1f:190'},
+	walkable = false,
+	buildable_to = true,
+	sunlight_propagates = true,
+	damage_per_second = 1,
+	drop = "",
+	paramtype = 'light',
+	light_source =8,
+	groups = {oddly_breakable_by_hand=1, dig_immediate=2, attached_node=1,not_in_creative_inventory =1},
+	sounds = default.node_sound_stone_defaults(),
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.25, -0.5, 0.25, 0.25, -0.375, 0.375},
+			{-0.3125, -0.5, 0.1875, -0.1875, -0.375, 0.3125},
+			{-0.375, -0.5, -0.25, -0.25, -0.375, 0.25},
+			{-0.3125, -0.5, -0.3125, -0.1875, -0.375, -0.1875},
+			{-0.25, -0.5, -0.375, 0.25, -0.375, -0.25},
+			{0.1875, -0.5, -0.3125, 0.3125, -0.375, -0.1875},
+			{0.25, -0.5, -0.25, 0.375, -0.375, 0.25},
+			{0.1875, -0.5, 0.1875, 0.3125, -0.375, 0.3125},
+		}
+	},
+	selection_box = {
+		type = "fixed",
+		fixed ={-0.4375, -0.5, -0.4375, 0.4375, -0.3125, 0.4375},
+	},
 	can_dig = function(pos,player)
 		local meta = minetest.get_meta(pos);
 		local inv = meta:get_inventory()
@@ -153,15 +251,41 @@ sounds = default.node_sound_stone_defaults(),
 		end
 		return true
 	end,
+
+	on_destruct = function(pos, oldnode, digger)
+        fire_particles_off(pos)
+    end,
 })
 
+-- sleeping bag
+if minetest.global_exists("beds") then
+beds.register_bed("campfire:sleeping_mat", {
+	description = "Sleeping Bag",
+	 inventory_image = "[combine:16x16:0,0=wool_white.png:0,6=wool_brown.png",
+	wield_image = "[combine:16x16:0,0=wool_white.png:0,6=wool_brown.png",
+	tiles = {
+		bottom = {"[combine:16x16:0,0=wool_brown.png:0,10=wool_brown.png"},
+		top = { "[combine:16x16:0,0=wool_white.png:0,6=wool_brown.png" }
+	},
+	nodebox = {
+		bottom = {
+			{-0.48, -0.5,-0.5,  0.48, -0.45, 0.5},
+		},
+		top = {
+			{-0.48, -0.5,-0.5,  0.48, -0.45, 0.5},
+		}
+	},
+	selectionbox = {-0.5, -0.5, -0.5, 0.5, -0.35, 1.5},
+	recipe = {
+		{"wool:white", "wool:brown", "wool:brown"},
+	},
+})
+end
 
------------------
+--------
 --ABMs
------------------
-
+--------
 --campfire
-
 minetest.register_abm({
 	nodenames = {'campfire:campfire','campfire:campfire_active'},
 	interval = 1.0,
@@ -196,7 +320,8 @@ minetest.register_abm({
 		end
 
 		if meta:get_float("fuel_time") < meta:get_float("fuel_totaltime") then
-			minetest.sound_play({name="campfire_small"},{pos=pos}, {max_hear_distance = 1},{loop=true},{gain=0.009})
+			minetest.sound_play({name="campfire_small"},{pos=pos}, {max_hear_distance = 8},{loop=true},{gain=0.009})
+			fire_particles_on(pos)
 			local percent = math.floor(meta:get_float("fuel_time") /
 			meta:get_float("fuel_totaltime") * 100)
 			meta:set_string("infotext","Campfire active: "..percent.."%")
@@ -241,56 +366,19 @@ minetest.register_abm({
 		stack:take_item()
 		inv:set_stack("fuel", 1, stack)
 		meta:set_string("formspec", campfire.campfire_active_formspec(item_percent))
+		 fire_particles_off(pos)
 	end,
 })
 
---smoke particles
-minetest.register_abm({
-	nodenames = {
-				"campfire:campfire_active"
-				},
-	interval = 1,
-	chance = 2,
-	catch_up = false,
-	action = function(pos, node)
-	     if
-                minetest.get_node({x=pos.x, y=pos.y+1.0, z=pos.z}).name == "air" and
-                minetest.get_node({x=pos.x, y=pos.y+2.0, z=pos.z}).name == "air"
-             then
-		local image_number = math.random(4)
-		minetest.add_particlespawner({
-			amount = 6,
-			time = 1,
-			minpos = {x=pos.x-0.25, y=pos.y+0.4, z=pos.z-0.25},
-			maxpos = {x=pos.x+0.25, y=pos.y+8, z=pos.z+0.25},
-			minvel = {x=-0.2, y=0.3, z=-0.2},
-			maxvel = {x=0.2, y=1, z=0.2},
-			minacc = {x=0,y=0,z=0},
-			maxacc = {x=0,y=0,z=0},
-			minexptime = 0.5,
-			maxexptime = 3,
-			minsize = 1,
-			maxsize = 6,
-			collisiondetection = false,
-			texture = "smoke_particle_"..image_number..".png",
-		})
-	     end
-	end
-})
 
 -----------------
 -- craft recipes
 -----------------
-
 minetest.register_craft({
-output = 'campfire:campfire',
-recipe = {
-{'', 'group:stone', ''},
-{'group:stone','default:stick', 'group:stone'},
-{'', 'group:stone', ''},
-}
+	output = 'campfire:campfire',
+	recipe = {
+		{'', 'group:stone', ''},
+		{'group:stone','default:stick', 'group:stone'},
+		{'', 'group:stone', ''},
+	}
 })
-
-local path = minetest.get_modpath("campfire")
-
-dofile(path.."/sleepingmat.lua")

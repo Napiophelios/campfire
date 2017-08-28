@@ -1,3 +1,5 @@
 default
 fire
-wool
+tnt
+beds?
+wool?
